@@ -14,18 +14,18 @@ class Reader extends Actor with ActorLogging{
   override def receive: Receive = {
     case StudentsPath(path) =>
       val rawStudents = retrieveStudentsFromCsv(path)
+      sender ! rawStudents
   }
 
   def retrieveStudentsFromCsv(path: String): Vector[RawStudent] = {
-    var rawStudents = Vector.empty[RawStudent]
-    val bufferedSource = Source.fromFile(path)
-    for (line <- bufferedSource.getLines) {
-      val cols = line.split(";")//.map(_.trim)
-      val rawStudent = RawStudent(cols(0), cols(1), cols(2), cols(3))
-      rawStudents = rawStudents :+ rawStudent
-    }
-    bufferedSource.close
+    val rawStudents = Source.fromFile(path).getLines()
+      .drop(1)
+      .filter(!_.isEmpty)
+      .map(_.split(";"))
+      .map(cols => RawStudent(cols(0), cols(1), cols(2), cols(3)))
+      .toVector
 
+    rawStudents.foreach(println)
     rawStudents
   }
 }

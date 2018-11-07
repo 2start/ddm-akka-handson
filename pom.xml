@@ -24,6 +24,12 @@
             <version>${akka.version}</version>
         </dependency>
 
+        <dependency>
+          <groupId>com.typesafe.akka</groupId>
+          <artifactId>akka-cluster_${scala.version}</artifactId>
+          <version>${akka.version}</version>
+        </dependency>
+
         <!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-testkit -->
         <dependency>
             <groupId>com.typesafe.akka</groupId>

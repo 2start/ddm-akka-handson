@@ -2,7 +2,6 @@ import Reader.{RawStudent, StudentsPath}
 import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
-import scala.concurrent.duration._
 
 class ReaderSpec extends TestKit(ActorSystem("ReaderSpec")) with ImplicitSender with Matchers with WordSpecLike with BeforeAndAfterAll {
 
@@ -15,7 +14,7 @@ class ReaderSpec extends TestKit(ActorSystem("ReaderSpec")) with ImplicitSender 
       val probe = TestProbe()
       val readerActor = system.actorOf(Reader.props())
 
-      val path = getClass.getResource("/students.csv").getPath()
+      val path = getClass.getResource("/students.csv").getPath
 
       readerActor.tell(StudentsPath(path), probe.ref)
 

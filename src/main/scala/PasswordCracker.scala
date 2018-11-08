@@ -32,6 +32,7 @@ class PasswordCracker extends Actor with ActorLogging {
     }
     None
   }
+
   // ~420ms average 250k hashs
   def calculateHash(password: String): String = {
     val hashedBytes = sha256.digest(password.getBytes("UTF-8"))

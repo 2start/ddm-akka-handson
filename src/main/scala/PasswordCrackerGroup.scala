@@ -31,7 +31,11 @@ class PasswordCrackerGroup(requestor: ActorRef) extends Actor with ActorLogging 
       val start = 111111
       val stop = 999999
       passwordCracker ! PasswordCheckRequest(hash, start, stop)
-      log.info(s"Creating actor ${passwordCracker} for ${hash}. Check ${start} to ${stop}")
+      log.info(s"Created pw cracker ${passwordCracker} for ${hash}. Check ${start} to ${stop}")
     }
+  }
+
+  override def preStart(): Unit = {
+    log.info(s"Created pw cracker group.")
   }
 }

@@ -3,14 +3,14 @@ import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
-class ReaderSpec extends TestKit(ActorSystem("ReaderSpec")) with ImplicitSender with Matchers with WordSpecLike with BeforeAndAfterAll {
+class ReaderSpec extends TestKit(ActorSystem("testSystem")) with ImplicitSender with Matchers with WordSpecLike with BeforeAndAfterAll {
 
   override def afterAll: Unit = {
     TestKit.shutdownActorSystem(system)
   }
 
   "Reader actor" must {
-    "read students from the students.csv" in {
+    "read students from the astudents.csv" in {
       val probe = TestProbe()
       val readerActor = system.actorOf(Reader.props())
 

@@ -2,7 +2,7 @@ import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
-class PipelineSupervisorSpec extends TestKit(ActorSystem("DeviceSpec")) with ImplicitSender with Matchers with WordSpecLike with BeforeAndAfterAll {
+class PipelineSupervisorSpec extends TestKit(ActorSystem("testSystem")) with ImplicitSender with Matchers with WordSpecLike with BeforeAndAfterAll {
 
   override def afterAll: Unit = {
     TestKit.shutdownActorSystem(system)

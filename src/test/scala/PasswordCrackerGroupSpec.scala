@@ -1,4 +1,5 @@
-import PasswordCrackerGroup.{HashRangeCheckRequest, HashRangeCheckResponse}
+import PasswordCrackerGroup.HashRangeCheckRequest
+import PipelineSupervisor.HashRangeCheckResponse
 import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}

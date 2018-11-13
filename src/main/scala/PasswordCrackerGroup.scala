@@ -1,12 +1,12 @@
 import PasswordCracker.{PasswordCheckRequest, PasswordCheckResponse}
-import PasswordCrackerGroup.{HashRangeCheckRequest, HashRangeCheckResponse}
+import PasswordCrackerGroup.HashRangeCheckRequest
+import PipelineSupervisor.HashRangeCheckResponse
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 
 object PasswordCrackerGroup {
   def props(requestor: ActorRef): Props = Props(new PasswordCrackerGroup(requestor))
 
   final case class HashRangeCheckRequest(hashes: Vector[String])
-  final case class HashRangeCheckResponse(crackedHashes: Map[String, String])
 }
 
 class PasswordCrackerGroup(requestor: ActorRef) extends Actor with ActorLogging {
@@ -20,7 +20,7 @@ class PasswordCrackerGroup(requestor: ActorRef) extends Actor with ActorLogging 
       this.hashes = hashes
     case PasswordCheckResponse(hash: String, start, stop, Some(password: String)) =>
       crackedHashes = crackedHashes + (hash -> password)
-      log.info(s"${self}: Found ${hash}:${password} on worker ${sender}")
+      log.info(s"$self: Found $hash:$password on worker $sender")
       if (hashes.size == crackedHashes.size) requestor ! HashRangeCheckResponse(crackedHashes)
   }
 
@@ -28,10 +28,10 @@ class PasswordCrackerGroup(requestor: ActorRef) extends Actor with ActorLogging 
     for(hash <- hashes) {
       val passwordCracker = context.actorOf(PasswordCracker.props)
       passwordCrackers = passwordCrackers :+ passwordCracker
-      val start = 111111
+      val start = 0
       val stop = 999999
       passwordCracker ! PasswordCheckRequest(hash, start, stop)
-      log.info(s"Created pw cracker ${passwordCracker} for ${hash}. Check ${start} to ${stop}")
+      log.info(s"Created pw cracker $passwordCracker for $hash. Check $start to $stop")
     }
   }
 

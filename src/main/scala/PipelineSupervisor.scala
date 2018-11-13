@@ -1,4 +1,4 @@
-import PasswordCrackerGroup.HashRangeCheckRequest
+import PwCrackService.HashRangeCheckRequest
 import Reader.{RawStudent, StudentsPath}
 import akka.actor.{Actor, ActorLogging, Props}
 
@@ -7,7 +7,7 @@ object PipelineSupervisor {
 
   final case class PipelineStart()
   final case class StudentsData(students: Vector[RawStudent])
-  final case class HashRangeCheckResponse(crackedHashes: Map[String, String])
+  final case class CrackedPasswords(crackedHashes: Map[String, String])
 }
 
 /**
@@ -19,17 +19,18 @@ class PipelineSupervisor extends Actor with ActorLogging {
   override def preStart(): Unit = log.info("Pipeline started")
   override def postStop(): Unit = log.info("Pipeline stopped")
 
-  var hashToStudentId = Map.empty[String, Integer]
-  var studentList = Vector.empty[RawStudent]
-  var numReportedPasswords = 0
+  var students = Vector.empty[RawStudent]
+  var hashToPassword = Map.empty[String, String]
 
   override def receive: Receive = {
     case PipelineStart =>
       startPipeline()
     case StudentsData(students) =>
-      startPasswordCracker(students)
-    case HashRangeCheckResponse(crackedHashes) =>
-      reportPasswords(crackedHashes)
+      this.students = students
+      startPwCrackService(students)
+    case CrackedPasswords(crackedHashes) =>
+      hashToPassword = crackedHashes
+      reportPasswords()
   }
 
   def startPipeline(): Unit = {
@@ -37,24 +38,19 @@ class PipelineSupervisor extends Actor with ActorLogging {
     reader ! StudentsPath("students.csv")
   }
 
-  def startPasswordCracker(students: Vector[RawStudent]): Unit = {
-    studentList = students
-    for ((student, index) <- students.zipWithIndex) {
-      hashToStudentId += (student.passwordHash -> index)
-    }
+  def startPwCrackService(): Unit = {
     val hashes = students.map(student => student.passwordHash)
-    val crackerGroup = context.actorOf(PasswordCrackerGroup.props(this.self))
-    crackerGroup ! HashRangeCheckRequest(hashes)
+    val pwCrackService = context.actorOf(Props[PwCrackService], "pwCrackService")
+    pwCrackService ! HashRangeCheckRequest(hashes)
   }
 
-  def reportPasswords(crackedHashes: Map[String, String]): Unit = {
-    for ((hash, origin) <- crackedHashes) {
-      val studentId = hashToStudentId(hash)
-      val student = studentList(studentId)
-      log.info(s"Password for student '${student.name}': $origin")
-      numReportedPasswords += 1
+  def startGeneAnalysisService(): Unit = {
+
+  }
+
+  def reportPasswords(): Unit = {
+    for (RawStudent(_, name, passwordHash, _) <- students) {
+      log.info(s"Password for student '${name}': ${hashToPassword(passwordHash)}")
     }
-    if (numReportedPasswords == studentList.length)
-      log.info("DONE")
   }
 }

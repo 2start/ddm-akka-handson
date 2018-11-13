@@ -1,16 +1,16 @@
 import java.security.MessageDigest
 
-import PasswordCracker.{PasswordCheckRequest, PasswordCheckResponse}
+import PwCracker.{PasswordCheckRequest, PasswordCheckResponse}
 import akka.actor.{Actor, ActorLogging, Props}
 
-object PasswordCracker {
-  def props = Props(new PasswordCracker)
+object PwCracker {
+  def props = Props(new PwCracker)
 
   final case class PasswordCheckRequest(hash: String, start: Int, stop: Int)
   final case class PasswordCheckResponse(hash: String, start: Int, stop: Int, password: Option[String])
 }
 
-class PasswordCracker extends Actor with ActorLogging {
+class PwCracker extends Actor with ActorLogging {
   val sha256: MessageDigest = MessageDigest.getInstance("SHA-256")
 
   override def receive: Receive = {
@@ -18,13 +18,9 @@ class PasswordCracker extends Actor with ActorLogging {
       sender ! PasswordCheckResponse(hash, start, stop, checkRange(hash, start, stop))
   }
 
-//  Leads to a stackoverflow despite the fact that tail recursion is used.
-//  def checkRange(hash: String, start: Int, stop: Int): Option[String] = {
-//    val password = start.toString
-//    if (calculateHash(password) == hash)  Some(password)
-//    else if (start > stop)  None
-//    else checkRange(hash, start + 1, stop)
-//  }
+  override def preStart() = {
+    log.info("Created Pw cracker.")
+  }
 
   def checkRange(hash: String, start: Int, stop: Int): Option[String] = {
     for (i <- start until stop) {

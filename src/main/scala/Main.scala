@@ -1,4 +1,5 @@
-import akka.actor.ActorSystem
+import akka.actor.{ActorSystem, Props}
+
 import scala.io.StdIn
 
 object Main extends App {
@@ -6,7 +7,7 @@ object Main extends App {
     val system = ActorSystem("handsonSystem")
 
     try {
-      var supervisor = system.actorOf(PipelineSupervisor.props(), "handsonSystemSupervisor")
+      val supervisor = system.actorOf(Props[PipelineSupervisor], "pipelineSupervisor")
       supervisor ! PipelineSupervisor.PipelineStart
       StdIn.readLine()
     } finally {

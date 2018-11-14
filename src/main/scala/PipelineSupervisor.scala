@@ -27,7 +27,7 @@ class PipelineSupervisor extends Actor with ActorLogging {
       startPipeline()
     case StudentsData(students) =>
       this.students = students
-      startPwCrackService(students)
+      startPwCrackService()
     case CrackedPasswords(crackedHashes) =>
       hashToPassword = crackedHashes
       reportPasswords()

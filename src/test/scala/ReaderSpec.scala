@@ -22,7 +22,7 @@ class ReaderSpec extends TestKit(ActorSystem("testSystem")) with ImplicitSender 
 
 
       response should contain (RawStudent(
-       "1",
+       1,
        "Sophia",
         "7c3c58cdfb7dbc141c28cba84d4d07ff67b936e913080142eed1c6f5bcb6c43f",
         "GGUCUCGAAGGGUGAACAAGCGACCUCAGAUCGUUGGCCUUCACCCGCACAGCGGUUGCCGCGU" +

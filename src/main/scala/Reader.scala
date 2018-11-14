@@ -7,7 +7,7 @@ object Reader {
   def props(): Props = Props[Reader]
 
   final case class StudentsPath(path: String)
-  final case class RawStudent(id: String, name: String, passwordHash: String, gene: String)
+  final case class RawStudent(id: Int, name: String, passwordHash: String, gene: String)
 }
 
 class Reader extends Actor with ActorLogging{
@@ -23,7 +23,7 @@ class Reader extends Actor with ActorLogging{
       .drop(1)
       .filter(!_.isEmpty)
       .map(_.split(";"))
-      .map(cols => RawStudent(cols(0), cols(1), cols(2), cols(3)))
+      .map(cols => RawStudent(cols(0).toInt, cols(1), cols(2), cols(3)))
       .toVector
   }
 }

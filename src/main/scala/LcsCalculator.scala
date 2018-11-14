@@ -2,14 +2,18 @@ import LcsCalculator.{LcsRequest, LcsResponse}
 import akka.actor.{Actor, ActorLogging}
 
 object LcsCalculator {
-  case class LcsRequest(string1: String, string2: String)
-  case class LcsResponse(length: Int)
+  case class LcsRequest(id1: Int, id2: Int, string1: String, string2: String)
+  case class LcsResponse(id1: Int, id2: Int, length: Int)
 }
 
 class LcsCalculator extends Actor with ActorLogging{
   override def receive: Receive = {
-    case LcsRequest(string1, string2) =>
-      sender ! LcsResponse(lcsLength(string1, string2))
+    case LcsRequest(id1, id2, string1, string2) =>
+      sender ! LcsResponse(id1, id2, lcsLength(string1, string2))
+  }
+
+  override def preStart() = {
+    log.info("Created lcs calculator.")
   }
 
   def lcsLength(string1: String, string2: String): Int = {

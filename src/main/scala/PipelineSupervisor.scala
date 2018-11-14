@@ -1,3 +1,4 @@
+import GeneAnalysisService.{GenesWithId, IdToPartnerIdWithLength}
 import PwCrackService.HashRangeCheckRequest
 import Reader.{RawStudent, StudentsPath}
 import akka.actor.{Actor, ActorLogging, Props}
@@ -21,6 +22,7 @@ class PipelineSupervisor extends Actor with ActorLogging {
 
   var students = Vector.empty[RawStudent]
   var hashToPassword = Map.empty[String, String]
+  var idToPartnerId = Map.empty[Int, Int]
 
   override def receive: Receive = {
     case PipelineStart =>
@@ -28,9 +30,13 @@ class PipelineSupervisor extends Actor with ActorLogging {
     case StudentsData(students) =>
       this.students = students
       startPwCrackService()
+      startGeneAnalysisService()
     case CrackedPasswords(crackedHashes) =>
       hashToPassword = crackedHashes
       reportPasswords()
+    case IdToPartnerIdWithLength(mapping) =>
+      idToPartnerId = mapping.mapValues(_._1)
+      reportPartners()
   }
 
   def startPipeline(): Unit = {
@@ -45,12 +51,20 @@ class PipelineSupervisor extends Actor with ActorLogging {
   }
 
   def startGeneAnalysisService(): Unit = {
-
+    val genesWithId = students.map(student => (student.gene, student.id))
+    val geneAnalysisService = context.actorOf(Props[GeneAnalysisService], "geneAnalysisService")
+    geneAnalysisService ! GenesWithId(genesWithId)
   }
 
   def reportPasswords(): Unit = {
     for (RawStudent(_, name, passwordHash, _) <- students) {
       log.info(s"Password for student '${name}': ${hashToPassword(passwordHash)}")
+    }
+  }
+
+  def reportPartners(): Unit = {
+    for (RawStudent(id, name, passwordHash, _) <- students) {
+      log.info(s"Partner for student '${name}' with id ${id}: ${idToPartnerId(id)}")
     }
   }
 }

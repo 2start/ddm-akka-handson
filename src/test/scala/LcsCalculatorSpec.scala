@@ -14,7 +14,7 @@ class LcsCalculatorSpec extends TestKit(ActorSystem("testSystem")) with Implicit
       val probe = TestProbe()
       val passwordCrackerActor = system.actorOf(Props[LcsCalculator])
 
-      passwordCrackerActor.tell(LcsRequest("abab123456789sdkjfjasfdj", "adkfsj123456789xabxab"), probe.ref)
+      passwordCrackerActor.tell(LcsRequest(1, 2, "abab123456789sdkjfjasfdj", "adkfsj123456789xabxab"), probe.ref)
       val response = probe.expectMsgType[LcsResponse]
       response.length should be (9)
     }

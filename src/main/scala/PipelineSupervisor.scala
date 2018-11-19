@@ -1,4 +1,5 @@
 import GeneAnalysisService.{GenesWithId, IdToPartnerIdWithLength}
+import LinearCombinationService.LinearCombinationRequest
 import PwCrackService.HashRangeCheckRequest
 import Reader.{RawStudent, StudentsPath}
 import akka.actor.{Actor, ActorLogging, Props}
@@ -9,6 +10,8 @@ object PipelineSupervisor {
   final case class PipelineStart()
   final case class StudentsData(students: Vector[RawStudent])
   final case class CrackedPasswords(crackedHashes: Map[String, String])
+  final case class LinearCombination(coefficients: Vector[Int])
+  final case class MinedHashes(hashes: Vector[String])
 }
 
 /**
@@ -23,6 +26,7 @@ class PipelineSupervisor extends Actor with ActorLogging {
   var students = Vector.empty[RawStudent]
   var hashToPassword = Map.empty[String, String]
   var idToPartnerId = Map.empty[Int, Int]
+  var prefixes = Vector.empty[Int]
 
   override def receive: Receive = {
     case PipelineStart =>
@@ -30,13 +34,17 @@ class PipelineSupervisor extends Actor with ActorLogging {
     case StudentsData(students) =>
       this.students = students
       startPwCrackService()
-      startGeneAnalysisService()
+      //startGeneAnalysisService()
     case CrackedPasswords(crackedHashes) =>
       hashToPassword = crackedHashes
       reportPasswords()
+      startLinearCombinationService()
     case IdToPartnerIdWithLength(mapping) =>
       idToPartnerId = mapping.mapValues(_._1)
       reportPartners()
+    case LinearCombination(coefficients) =>
+      prefixes = coefficients
+      reportPrefixes()
   }
 
   def startPipeline(): Unit = {
@@ -56,15 +64,26 @@ class PipelineSupervisor extends Actor with ActorLogging {
     geneAnalysisService ! GenesWithId(genesWithId)
   }
 
+  def startLinearCombinationService(): Unit = {
+    val linearCombinationService = context.actorOf(Props[LinearCombinationService], "linearCombinationService")
+    linearCombinationService ! LinearCombinationRequest(hashToPassword.values.toVector)
+
+  }
+
   def reportPasswords(): Unit = {
     for (RawStudent(_, name, passwordHash, _) <- students) {
-      log.info(s"Password for student '${name}': ${hashToPassword(passwordHash)}")
+      log.info(s"Password for student '$name': ${hashToPassword(passwordHash)}")
     }
   }
 
   def reportPartners(): Unit = {
     for (RawStudent(id, name, passwordHash, _) <- students) {
-      log.info(s"Partner for student '${name}' with id ${id}: ${idToPartnerId(id)}")
+      log.info(s"Partner for student '$name' with id $id: ${idToPartnerId(id)}")
     }
+  }
+
+  def reportPrefixes(): Unit = {
+    val prefixString = prefixes.map({case 1 => '+' case -1 => '-'}).mkString("")
+    log.info(s"Prefixes: $prefixString")
   }
 }

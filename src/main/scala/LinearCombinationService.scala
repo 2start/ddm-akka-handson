@@ -1,5 +1,5 @@
-import LinearCombinationFinder.LinearCombinationCheckRequest
-import LinearCombinationService.{LinearCombinationFound, LinearCombinationRequest}
+import LinearCombinator.LinearCombinationCheckRequest
+import LinearCombinationService.{LinearCombinationResponse, LinearCombinationRequest}
 import PipelineSupervisor.LinearCombination
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.routing.FromConfig
@@ -8,12 +8,12 @@ import scala.collection.mutable
 
 object LinearCombinationService {
   final case class LinearCombinationRequest(passwords: Vector[String])
-  final case class LinearCombinationFound(coefficients: Vector[Int])
+  final case class LinearCombinationResponse(coefficients: Vector[Int])
 }
 
 class LinearCombinationService extends Actor with ActorLogging {
   val linearCombinationRouter: ActorRef = context.actorOf(
-    FromConfig.props(Props[LinearCombinationFinder]),
+    FromConfig.props(Props[LinearCombinator]),
     "linearCombinationRouter"
   )
 
@@ -24,7 +24,7 @@ class LinearCombinationService extends Actor with ActorLogging {
     case LinearCombinationRequest(passwords)  =>
       this.reportTo = sender
       distributeLinearCombinations(passwords)
-    case LinearCombinationFound(coefficients) =>
+    case LinearCombinationResponse(coefficients) =>
       finalizeLinearCombinationSearch(coefficients)
   }
 

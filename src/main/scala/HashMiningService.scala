@@ -36,7 +36,7 @@ class HashMiningService extends Actor with ActorLogging {
       try {
         queueNextJob()
       } catch {
-        case e: IllegalStateException => return
+        case _: IllegalStateException => return
       }
     }
   }
@@ -55,7 +55,7 @@ class HashMiningService extends Actor with ActorLogging {
 
   def nextIndex(): Int = {
     if (minedIds.size == partnerIds.length)
-      throw IllegalStateException
+      throw new IllegalStateException
 
     while (minedIds.contains(index)) {
       index += 1

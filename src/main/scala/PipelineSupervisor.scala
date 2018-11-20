@@ -34,17 +34,19 @@ class PipelineSupervisor extends Actor with ActorLogging {
     case StudentsData(students) =>
       this.students = students
       startPwCrackService()
+      val tPostCrack = System.currentTimeMillis()
       //startGeneAnalysisService()
-    case CrackedPasswords(crackedHashes) =>
-      hashToPassword = crackedHashes
-      reportPasswords()
-      startLinearCombinationService()
     case IdToPartnerIdWithLength(mapping) =>
       idToPartnerId = mapping.mapValues(_._1)
       reportPartners()
+    case CrackedPasswords(crackedHashes) =>
+      hashToPassword = crackedHashes
+      println(s"Linear Combination start: ${System.currentTimeMillis()/1000}")
+      startLinearCombinationService()
     case LinearCombination(coefficients) =>
       prefixes = coefficients
       reportPrefixes()
+      println(s"Linear Combination end: ${System.currentTimeMillis()/1000}")
   }
 
   def startPipeline(): Unit = {
@@ -66,7 +68,10 @@ class PipelineSupervisor extends Actor with ActorLogging {
 
   def startLinearCombinationService(): Unit = {
     val linearCombinationService = context.actorOf(Props[LinearCombinationService], "linearCombinationService")
-    linearCombinationService ! LinearCombinationRequest(hashToPassword.values.toVector)
+
+    // make sure that the passed pw vector is ordered by student ids (map does not guarantee ordering
+    val orderedPasswords = students.map(s => hashToPassword(s.passwordHash))
+    linearCombinationService ! LinearCombinationRequest(orderedPasswords)
 
   }
 

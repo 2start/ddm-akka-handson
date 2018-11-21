@@ -23,6 +23,8 @@ class PipelineSupervisor extends Actor with ActorLogging {
   var prefixes = Vector.empty[Int]
   var minedHashes = Vector.empty[String]
 
+  var hashMiningStarted = false
+
   override def receive: Receive = {
     case PipelineStart =>
       startPipeline()
@@ -66,10 +68,11 @@ class PipelineSupervisor extends Actor with ActorLogging {
   }
 
   def startHashMiningService(): Unit = {
-    if (prefixes.nonEmpty && partners.nonEmpty) {
-      val hashMiningService = context.actorOf(Props[HashMiningService], name = "hashMiningService")
-      hashMiningService ! HashMiningRequest(partners, prefixes)
-    }
+    if (hashMiningStarted || prefixes.isEmpty || partners.isEmpty) return
+
+    val hashMiningService = context.actorOf(Props[HashMiningService], name = "hashMiningService")
+    hashMiningService ! HashMiningRequest(partners, prefixes)
+    hashMiningStarted = true
   }
 
   def storeStudents(students: Vector[Reader.RawStudent]): Unit = {
@@ -87,7 +90,7 @@ class PipelineSupervisor extends Actor with ActorLogging {
   def storePartners(studentIdToPartnerId: Map[Int, (Int, Int)]): Unit = {
     partners = students.map(student => studentIdToPartnerId(student.id)._1)
     for ((RawStudent(_, name, _, _), i) <- students.zipWithIndex) {
-      log.info(s"Password for student '$name': ${partners(i)}")
+      log.info(s"Partner for student '$name': ${partners(i)}")
     }
   }
 
@@ -102,6 +105,7 @@ class PipelineSupervisor extends Actor with ActorLogging {
     for ((RawStudent(_, name, _, _), i) <- students.zipWithIndex) {
       log.info(s"Mined hash for student '$name': ${hashes(i)}")
     }
+    log.info("DONE!")
   }
 
   override def preStart(): Unit = log.info("Pipeline started")

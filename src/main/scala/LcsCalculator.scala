@@ -12,7 +12,7 @@ class LcsCalculator extends Actor with ActorLogging{
       sender ! LcsResponse(id1, id2, lcsLength(string1, string2))
   }
 
-  override def preStart() = {
+  override def preStart(): Unit = {
     log.info("Created lcs calculator.")
   }
 

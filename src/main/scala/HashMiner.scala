@@ -21,7 +21,11 @@ class HashMiner extends Actor with ActorLogging with Hasher {
     while (true) {
       val nonce = rand.nextInt
       val hash = this.calculateHash((value + nonce).toString)
-      if (hash.startsWith(prefix)) sender ! HashFound(value, hash)
+      if (hash.startsWith(prefix)) {
+        sender ! HashFound(value, hash)
+        log.info(s"Hash for partnerId $value found: $hash")
+        return
+      }
     }
   }
 }

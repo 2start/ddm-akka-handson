@@ -38,7 +38,7 @@ class BestPartnerAggregator(numberOfGenes: Int, replyTo: ActorRef) extends Actor
 
   override def receive: Receive = {
     case LcsResponse(id1, id2, length) =>
-      log.info(s"Lcs reponse from ${sender}: ${id1}, ${id2}, length: ${length}")
+      log.info(s"LCS reponse: $id1, $id2, length: $length")
 
       val id1PartnerLength = idToPartnerIdWithLength.getOrElse(id1, (0, 0))._2
       val id2PartnerLength = idToPartnerIdWithLength.getOrElse(id2, (0, 0))._2

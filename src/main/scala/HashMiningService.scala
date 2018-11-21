@@ -15,19 +15,19 @@ class HashMiningService extends Actor with ActorLogging {
   )
 
   var reportTo: ActorRef = _
-  var partnerIds: Vector[Int] = _
-  var prefixes: Vector[Int] = _
-  var hashes = Map.empty[Int, String]
+  var partnerIds = Vector.empty[Int]
+  var prefixes = Vector.empty[Int]
+  var partnerIdToHash = Map.empty[Int, String]
   var index = 0
-  var minedIds = Set.empty[Int]
 
   override def receive: Receive = {
-    case HashMiningRequest(partnerIds, prefixes)  =>
-      this.reportTo = sender
-      this.partnerIds = partnerIds
+    case HashMiningRequest(ids, prfxs)  =>
+      reportTo = sender
+      partnerIds = ids
+      prefixes = prfxs
       startHashMining()
-    case HashFound(id, hash) =>
-      storeHash(id, hash)
+    case HashFound(partnerId, hash) =>
+      storeHash(partnerId, hash)
   }
 
   def startHashMining(): Unit = {
@@ -41,10 +41,9 @@ class HashMiningService extends Actor with ActorLogging {
     }
   }
 
-  def storeHash(id: Int, hash: String): Unit = {
-    if (!minedIds.contains(id)) {
-      minedIds = minedIds + id
-      hashes = hashes + (id -> hash)
+  def storeHash(partnerId: Int, hash: String): Unit = {
+    if (!partnerIdToHash.contains(partnerId)) {
+      partnerIdToHash = partnerIdToHash + (partnerId -> hash)
     }
     try {
       queueNextJob()
@@ -54,10 +53,10 @@ class HashMiningService extends Actor with ActorLogging {
   }
 
   def nextIndex(): Int = {
-    if (minedIds.size == partnerIds.length)
-      throw IllegalStateException
+    if (partnerIdToHash.size == partnerIds.length)
+      throw new IllegalStateException("No unmined hashes left.")
 
-    while (minedIds.contains(index)) {
+    while (partnerIdToHash.contains(partnerIds(index))) {
       index += 1
       if (index >= partnerIds.length)
         index = 0
@@ -68,11 +67,11 @@ class HashMiningService extends Actor with ActorLogging {
   def queueNextJob(): Unit = {
     val next = nextIndex()
     val prefix = if (prefixes(next) == -1) "00000" else "11111"
-    hashMiningRouter.tell(HashMiner.HashMiningRequest(next, partnerIds(next), prefix), self)
+    hashMiningRouter.tell(HashMiner.HashMiningRequest(partnerIds(next), prefix), self)
   }
 
   def reportMinedHashes(): Unit = {
-    val hashVector = partnerIds.zipWithIndex.map({ case (_, i) => hashes(i) })
+    val hashVector = partnerIds.map(partnerId => partnerIdToHash(partnerId))
     reportTo ! MinedHashes(hashVector)
     context.stop(hashMiningRouter)
   }

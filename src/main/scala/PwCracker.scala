@@ -14,10 +14,6 @@ class PwCracker extends Actor with ActorLogging with Hasher {
       sender ! PasswordCheckResponse(hash, start, stop, checkRange(hash, start, stop))
   }
 
-  override def preStart() : Unit = {
-    log.info("Created Pw cracker.")
-  }
-
   def checkRange(hash: String, start: Int, stop: Int): Option[String] = {
     for (i <- start until stop) {
       if (hash == calculateHash(i.toString)) return Some(i.toString)

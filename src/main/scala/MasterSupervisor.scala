@@ -20,12 +20,15 @@ class MasterSupervisor(numWorkers: Int, numSlaves: Int, inputPath: String) exten
     case SlaveJoined(slaveWorkers) =>
       addSlave(slaveWorkers, sender)
     case PipelineFinished() =>
+      log.info("Disconnecting slaves...")
       for (slave <- slaves)
         slave ! PipelineFinished()
+      log.info("Shutting down...")
       context.system.terminate()
   }
 
   def addSlave(slaveWorkers: Map[String, Vector[ActorRef]], slave: ActorRef): Unit = {
+    log.info(s"Slave connected: $slave")
     for ((job, jobWorkers) <- slaveWorkers) {
       workers += (job -> (workers(job) ++ jobWorkers))
     }

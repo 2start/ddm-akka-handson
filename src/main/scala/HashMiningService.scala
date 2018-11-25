@@ -29,7 +29,6 @@ class HashMiningService extends TaskService {
   }
 
   def startHashMining(): Unit = {
-    log.info("Hash Mining started")
     router = Some(createRouter())
     val numWorkers = workers.length
     for (_ <- 0 to numWorkers) {
@@ -68,7 +67,7 @@ class HashMiningService extends TaskService {
     val next = nextIndex()
     val prefix = if (prefixes(next) == -1) "00000" else "11111"
     router.foreach(r => r.route(HashMiner.HashMiningRequest(partnerIds(next), prefix), self))
-    log.info(s"Hash Mining job for partnerId ${partnerIds(next)} queued")
+    log.debug(s"Hash Mining job for partnerId ${partnerIds(next)} queued")
   }
 
   def reportMinedHashes(): Unit = {
@@ -77,7 +76,7 @@ class HashMiningService extends TaskService {
     reportTo ! MinedHashes(hashVector)
     hashesReported = true
     stopRouter()
-    log.info("All hashes mined")
+    log.debug("All hashes mined")
 
   }
 }

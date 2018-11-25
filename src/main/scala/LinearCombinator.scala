@@ -55,7 +55,7 @@ class LinearCombinator extends Actor with ActorLogging {
     val minusAnzahl = tailValues.length - plusAnzahl
 
     val result = spreadSearch(tailValues, plusAnzahl, minusAnzahl, target)
-    log.info(s"target: ${target}, ${prefix.head}, $tailValues, $result")
+    log.debug(s"target: ${target}, ${prefix.head}, $tailValues, $result")
 
     result match {
       case Some(combination) => replyTo ! LinearCombinationResponse(prefix ++ combination)

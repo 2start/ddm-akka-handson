@@ -25,14 +25,11 @@ class LinearCombinationService extends TaskService {
 
   def distributeLinearCombinations(passwords: Vector[String]): Unit = {
     val router = createRouter()
-    log.info("Starting Linear Combination workers")
     val passwordsInt = passwords.map(password => password.toInt)
     val numWorkers = workers.length
     for (vector <- createBinaryVectors((Math.log(numWorkers)/Math.log(2)).ceil.toInt)) {
       router.route(LinearCombinationCheckRequest(passwordsInt, vector), self)
-      log.info(s"Start worker with prefix $vector")
     }
-    log.info("All Linear Combination workers started")
   }
 
   def finalizeLinearCombinationSearch(coefficients: Vector[Int]): Unit = {
@@ -40,7 +37,7 @@ class LinearCombinationService extends TaskService {
       reportTo ! LinearCombination(coefficients)
       reported = true
       stopRouter()
-      log.info("Stopped LinearCombinationService!")
+      log.debug("Stopped LinearCombinationService!")
     }
   }
 

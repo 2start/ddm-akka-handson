@@ -23,7 +23,7 @@ class HashMiner extends Actor with ActorLogging with Hasher {
       val hash = this.calculateHash((value + nonce).toString)
       if (hash.startsWith(prefix)) {
         sender ! HashFound(value, hash)
-        log.info(s"Hash for partnerId $value found: $hash")
+        log.debug(s"Hash for partnerId $value found: $hash")
         return
       }
     }

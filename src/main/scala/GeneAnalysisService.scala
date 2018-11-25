@@ -1,30 +1,29 @@
 import GeneAnalysisService.{GenesWithId, IdToPartnerIdWithLength}
 import LcsCalculator.{LcsRequest, LcsResponse}
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
-import akka.routing.FromConfig
 
 object GeneAnalysisService {
   // ids are expected to be numbered from 1 to genesWithId.length
-  case class GenesWithId(genesWithId: Vector[(String, Int)])
+  case class GenesWithId(genesWithId: Vector[(String, Int)], workers: Vector[ActorRef])
   case class IdToPartnerIdWithLength(mappings: Map[Int, (Int, Int)])
 }
 
-class GeneAnalysisService extends Actor with ActorLogging{
-
-  val lcsRouter: ActorRef = context.actorOf(FromConfig.props(Props[LcsCalculator]), "lcsRouter")
+class GeneAnalysisService extends TaskService {
 
   override def receive: Receive = {
-    case GenesWithId(genesWithId) =>
+    case GenesWithId(genesWithId, w) =>
+      workers = w
       distributeWork(genesWithId, sender)
   }
 
   def distributeWork(genesWithId: Vector[(String, Int)], replyTo: ActorRef): Unit = {
     val aggregator = context.actorOf(Props(classOf[BestPartnerAggregator], genesWithId.length, replyTo))
+    val router = createRouter()
 
     for ((gene1, id1) <- genesWithId) {
       for ((gene2, id2) <- genesWithId) {
         if (id1 < id2) {
-          lcsRouter.tell(LcsRequest(id1, id2, gene1, gene2), aggregator)
+          router.route(LcsRequest(id1, id2, gene1, gene2), aggregator)
         }
       }
     }

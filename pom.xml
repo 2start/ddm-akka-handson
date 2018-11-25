@@ -13,6 +13,8 @@
         <scala.version>2.12</scala.version>
         <akka.version>2.5.17</akka.version>
         <scalatest.version>3.0.5</scalatest.version>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
 
     <dependencies>
@@ -24,15 +26,9 @@
         </dependency>
 
         <dependency>
-          <groupId>com.typesafe.akka</groupId>
-          <artifactId>akka-cluster_${scala.version}</artifactId>
-          <version>${akka.version}</version>
-        </dependency>
-
-        <dependency>
-          <groupId>com.typesafe.akka</groupId>
-          <artifactId>akka-cluster-metrics_${scala.version}</artifactId>
-          <version>${akka.version}</version>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-remote_${scala.version}</artifactId>
+            <version>${akka.version}</version>
         </dependency>
 
         <dependency>
@@ -47,6 +43,18 @@
             <artifactId>scalatest_${scala.version}</artifactId>
             <version>${scalatest.version}</version>
             <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.beust</groupId>
+            <artifactId>jcommander</artifactId>
+            <version>1.72</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.twitter</groupId>
+            <artifactId>chill-akka_${scala.version}</artifactId>
+            <version>0.9.2</version>
         </dependency>
 
     </dependencies>

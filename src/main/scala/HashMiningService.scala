@@ -1,28 +1,25 @@
 import HashMiningService.{HashFound, HashMiningRequest}
 import PipelineSupervisor.MinedHashes
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
-import akka.routing.FromConfig
+import akka.actor.ActorRef
+import akka.routing.Router
 
 object HashMiningService {
-  final case class HashMiningRequest(partnerIds: Vector[Int], prefixes: Vector[Int])
+  final case class HashMiningRequest(partnerIds: Vector[Int], prefixes: Vector[Int], workers: Vector[ActorRef])
   final case class HashFound(id: Int, hash: String)
 }
 
-class HashMiningService extends Actor with ActorLogging {
-  val hashMiningRouter: ActorRef = context.actorOf(
-    FromConfig.props(Props[HashMiner]),
-    "hashMiningRouter"
-  )
-
+class HashMiningService extends TaskService {
   var reportTo: ActorRef = _
   var partnerIds = Vector.empty[Int]
   var prefixes = Vector.empty[Int]
   var partnerIdToHash = Map.empty[Int, String]
   var index: Int = -1
   var hashesReported = false
+  var router: Option[Router] = None
 
   override def receive: Receive = {
-    case HashMiningRequest(ids, prfxs)  =>
+    case HashMiningRequest(ids, prfxs, w)  =>
+      workers = w
       reportTo = sender
       partnerIds = ids
       prefixes = prfxs
@@ -33,8 +30,9 @@ class HashMiningService extends Actor with ActorLogging {
 
   def startHashMining(): Unit = {
     log.info("Hash Mining started")
-    val numberOfWorkers = 6
-    for (_ <- 0 to numberOfWorkers) {
+    router = Some(createRouter())
+    val numWorkers = workers.length
+    for (_ <- 0 to numWorkers) {
       try {
         queueNextJob()
       } catch {
@@ -69,7 +67,7 @@ class HashMiningService extends Actor with ActorLogging {
   def queueNextJob(): Unit = {
     val next = nextIndex()
     val prefix = if (prefixes(next) == -1) "00000" else "11111"
-    hashMiningRouter.tell(HashMiner.HashMiningRequest(partnerIds(next), prefix), self)
+    router.foreach(r => r.route(HashMiner.HashMiningRequest(partnerIds(next), prefix), self))
     log.info(s"Hash Mining job for partnerId ${partnerIds(next)} queued")
   }
 
@@ -78,7 +76,7 @@ class HashMiningService extends Actor with ActorLogging {
     val hashVector = partnerIds.map(partnerId => partnerIdToHash(partnerId))
     reportTo ! MinedHashes(hashVector)
     hashesReported = true
-    context.stop(hashMiningRouter)
+    stopRouter()
     log.info("All hashes mined")
 
   }

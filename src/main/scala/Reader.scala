@@ -19,7 +19,7 @@ class Reader extends Actor with ActorLogging{
   }
 
   def retrieveStudentsFromCsv(path: String): Vector[RawStudent] = {
-    Source.fromResource(path).getLines()
+    Source.fromFile(path).getLines()
       .drop(1)
       .filter(!_.isEmpty)
       .map(_.split(";"))

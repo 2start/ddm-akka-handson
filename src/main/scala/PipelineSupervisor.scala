@@ -1,15 +1,16 @@
 import GeneAnalysisService.{GenesWithId, IdToPartnerIdWithLength}
 import HashMiningService.HashMiningRequest
 import LinearCombinationService.LinearCombinationRequest
+import MasterSupervisor.PipelineFinished
 import PipelineSupervisor._
 import PwCrackService.HashRangeCheckRequest
 import Reader.{RawStudent, StudentsPath}
-import akka.actor.{Actor, ActorLogging, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 
 object PipelineSupervisor  {
   val props  = Props(new PipelineSupervisor)
 
-  final case class PipelineStart()
+  final case class PipelineStart(workers: Map[String, Vector[ActorRef]], inputPath: String)
   final case class StudentsData(students: Vector[RawStudent])
   final case class CrackedPasswords(crackedHashes: Map[String, String])
   final case class LinearCombination(coefficients: Vector[Int])
@@ -22,90 +23,76 @@ class PipelineSupervisor extends Actor with ActorLogging {
   var partners = Vector.empty[Int]
   var prefixes = Vector.empty[Int]
   var minedHashes = Vector.empty[String]
+  var workers = Map.empty[String, Vector[ActorRef]]
 
   var hashMiningStarted = false
+  var master: Option[ActorRef] = None
 
   override def receive: Receive = {
-    case PipelineStart =>
-      startPipeline()
+    case PipelineStart(jobsToWorkers, inputPath) =>
+      workers = jobsToWorkers
+      master = Some(sender)
+      startPipeline(inputPath)
     case StudentsData(data) =>
-      storeStudents(data)
+      students = data
       startPwCrackService()
       startGeneAnalysisService()
     case CrackedPasswords(hashToPassword) =>
-      storePasswords(hashToPassword)
+      passwords = students.map(student => hashToPassword(student.passwordHash))
       startLinearCombinationService()
     case IdToPartnerIdWithLength(studentIdToPartnerId) =>
-      storePartners(studentIdToPartnerId)
+      partners = students.map(student => studentIdToPartnerId(student.id)._1)
       startHashMiningService()
     case LinearCombination(coefficients) =>
-      storePrefixes(coefficients)
+      prefixes = coefficients
       startHashMiningService()
     case MinedHashes(hashes) =>
-      storeMinedHashes(hashes)
+      minedHashes = hashes
+      reportResults()
   }
 
-  def startPipeline(): Unit = {
+  def startPipeline(inputPath: String): Unit = {
     val reader = context.actorOf(Reader.props())
-    reader ! StudentsPath("students.csv")
+    reader ! StudentsPath(inputPath)
   }
 
   def startPwCrackService(): Unit = {
     val hashes = students.map(student => student.passwordHash)
     val pwCrackService = context.actorOf(Props[PwCrackService], "pwCrackService")
-    pwCrackService ! HashRangeCheckRequest(hashes)
+    pwCrackService ! HashRangeCheckRequest(hashes, workers("pwCrackService"))
   }
 
   def startGeneAnalysisService(): Unit = {
     val genesWithId = students.map(student => (student.gene, student.id))
     val geneAnalysisService = context.actorOf(Props[GeneAnalysisService], "geneAnalysisService")
-    geneAnalysisService ! GenesWithId(genesWithId)
+    geneAnalysisService ! GenesWithId(genesWithId, workers("geneAnalysisService"))
   }
 
   def startLinearCombinationService(): Unit = {
     val linearCombinationService = context.actorOf(Props[LinearCombinationService], "linearCombinationService")
-    linearCombinationService ! LinearCombinationRequest(passwords)
+    linearCombinationService ! LinearCombinationRequest(passwords, workers("linearCombinationService"))
   }
 
   def startHashMiningService(): Unit = {
     if (hashMiningStarted || prefixes.isEmpty || partners.isEmpty) return
 
     val hashMiningService = context.actorOf(Props[HashMiningService], name = "hashMiningService")
-    hashMiningService ! HashMiningRequest(partners, prefixes)
+    hashMiningService ! HashMiningRequest(partners, prefixes, workers("hashMiningService"))
     hashMiningStarted = true
   }
 
-  def storeStudents(students: Vector[Reader.RawStudent]): Unit = {
-    this.students = students
-    log.info("Student data received")
-  }
-
-  def storePasswords(hashToPassword: Map[String, String]): Unit = {
-    passwords = students.map(student => hashToPassword(student.passwordHash))
-    for ((RawStudent(_, name, _, _), i) <- students.zipWithIndex) {
-      log.info(s"Password for student '$name': ${passwords(i)}")
+  def reportResults(): Unit = {
+    val prefixSymbols = prefixes.map({ case 1 => '+' case -1 => '-' })
+    for ((RawStudent(id, name, _, _), i) <- students.zipWithIndex) {
+      log.info(
+        s"Student '$name' (id=$id): " +
+          s"Password = '${passwords(i)}', " +
+          s"Partner = '${partners(i)}', " +
+          s"Prefix = '${prefixSymbols(i)}', " +
+          s"Hash = '${minedHashes(i)}'"
+      )
     }
-  }
-
-  def storePartners(studentIdToPartnerId: Map[Int, (Int, Int)]): Unit = {
-    partners = students.map(student => studentIdToPartnerId(student.id)._1)
-    for ((RawStudent(_, name, _, _), i) <- students.zipWithIndex) {
-      log.info(s"Partner for student '$name': ${partners(i)}")
-    }
-  }
-
-  def storePrefixes(coefficients: Vector[Int]): Unit = {
-    prefixes = coefficients
-    val prefixString = coefficients.map({ case 1 => '+' case -1 => '-' }).mkString("")
-    log.info(s"Prefixes: $prefixString")
-  }
-
-  def storeMinedHashes(hashes: Vector[String]): Unit = {
-    minedHashes = hashes
-    for ((RawStudent(_, name, _, _), i) <- students.zipWithIndex) {
-      log.info(s"Mined hash for student '$name': ${hashes(i)}")
-    }
-    log.info("DONE!")
+    master.foreach(m => m ! PipelineFinished())
   }
 
   override def preStart(): Unit = log.info("Pipeline started")

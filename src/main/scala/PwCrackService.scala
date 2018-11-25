@@ -1,33 +1,30 @@
-import PwCracker.{PasswordCheckRequest, PasswordCheckResponse}
-import PwCrackService.HashRangeCheckRequest
 import PipelineSupervisor.CrackedPasswords
+import PwCrackService.HashRangeCheckRequest
+import PwCracker.{PasswordCheckRequest, PasswordCheckResponse}
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
-import akka.routing.FromConfig
 
 object PwCrackService {
   def props: Props = Props[PwCrackService]
 
-  final case class HashRangeCheckRequest(hashes: Vector[String])
+  final case class HashRangeCheckRequest(hashes: Vector[String], workers: Vector[ActorRef])
 }
 
-class PwCrackService extends Actor with ActorLogging {
-
-  val pwCrackRouter: ActorRef = context.actorOf(FromConfig.props(Props[PwCracker]), "pwCrackRouter")
-  var passwordCrackers = Vector.empty[ActorRef]
-
+class PwCrackService extends TaskService {
   override def receive: Receive = {
-    case HashRangeCheckRequest(hashes)  =>
+    case HashRangeCheckRequest(hashes, w)  =>
+      workers = w
       distributeHashes(hashes, sender)
   }
 
   def distributeHashes(hashes: Vector[String], replyTo: ActorRef): Unit = {
     val aggregator = context.actorOf(Props(classOf[CrackedPasswordsAggregator], hashes.size, replyTo))
+    val router = createRouter()
 
     for(hash <- hashes) {
       val start = 100000
       val stop = 999999
 
-      pwCrackRouter.tell(PasswordCheckRequest(hash, start, stop), aggregator)
+      router.route(PasswordCheckRequest(hash, start, stop), aggregator)
       log.info(s"Distributed password cracking task $hash. Check $start to $stop")
     }
   }
